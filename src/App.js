@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import StarRating from "./Stars";
-import { keyboard } from "@testing-library/user-event/dist/keyboard";
 
 const apiKey = "2537c8";
 export default function App() {
@@ -87,11 +86,11 @@ export default function App() {
       handleCloseMovie();
 
       //this is used to abort last action if user keeps writing in search
-      return function () {
+      return function cleanup() {
         controller.abort();
       };
     },
-    [query]
+    [query, controller, handleCloseMovie]
   );
 
   //this is the front part of the app that we see in the web
@@ -227,7 +226,7 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
 
   useEffect(() => {
     fetchEpisodes();
-  }, [useCallback]);
+  }, [fetchEpisodes, selectId, selectedSeason, totalEpisodes]);
 
   function handleAddToWatchList() {
     const newWatchedMovie = {
