@@ -6,13 +6,4 @@ import App from "./App";
 import StarRating from "./Stars";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <App />
-    {/* <StarRating
-      maxRating={5}
-      messages={["Terrible", "Bad", "Okay", "Good", "Amazing"]}
-      onSetRating={0}
-    /> */}
-  </React.StrictMode>
-);
+root.render(<App />);
