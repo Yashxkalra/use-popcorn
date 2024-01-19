@@ -50,6 +50,7 @@ export default function StarRating({
               color={color}
             />
           ))}
+
           <p style={textStyle}>
             {messages.length === maxRating
               ? messages[tempRating ? tempRating - 1 : rating - 1]
@@ -65,6 +66,7 @@ function Star({ onRate, full, onHoverIn, onHoverOut, size, color }) {
   const starStyle = {
     width: `${size}px`,
     height: `${size}px`,
+    maxWidth: `${size}px`,
     display: "block",
     cursor: "pointer",
     color: `${color}`,

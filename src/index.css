@@ -57,7 +57,7 @@ body {
 .box {
   width: 42rem;
   max-width: 42rem;
-  min-height: 30rem;
+  min-height: 10rem;
   background-color: var(--color-background-500);
   border-radius: 0.9rem;
   overflow: scroll;
@@ -120,6 +120,12 @@ body {
 
 .search::placeholder {
   color: var(--color-text-dark);
+}
+
+@media screen and (max-width: 420px) {
+  .details section {
+    padding: 2rem !important;
+  }
 }
 
 .search:focus {
@@ -340,11 +346,12 @@ body {
   position: absolute;
   top: 0.6rem;
   left: 0.6rem;
+  width: 3.2rem;
   height: 3.2rem;
-  aspect-ratio: 1;
+
   border-radius: 50%;
   border: none;
-  /* background-color: var(--color-text); */
+
   background-color: #fff;
   color: var(--color-background-500);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
@@ -361,6 +368,7 @@ body {
 .select-container {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .select-wrap {
@@ -368,12 +376,12 @@ body {
   justify-content: center;
   gap: 1rem;
   flex-direction: column;
+
 }
 
 select {
   background-color: transparent;
   color: #fff;
-  max-width: max-content;
 
   text-transform: uppercase;
   padding: 0.8rem 2.4rem;
@@ -383,6 +391,7 @@ select {
 
 select option {
   color: #212529;
+
 }
 
 /*
