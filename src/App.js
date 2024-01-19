@@ -48,7 +48,7 @@ export default function App() {
           //fetch data from api
 
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${apiKey}&s=${query}`,
+            `https://www.omdbapi.com/?apikey=${apiKey}&s=${query}`,
             { signal: controller.signal }
           );
           //if data comes false it will convert it to true to show error
@@ -264,7 +264,7 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
       setIsLoading(true);
       async function fetchMovieDetails() {
         const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${apiKey}&i=${selectId}`
+          `https://www.omdbapi.com/?apikey=${apiKey}&i=${selectId}`
         );
         const data = await res.json();
         if (!res.ok) {
