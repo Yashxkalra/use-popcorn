@@ -90,7 +90,7 @@ export default function App() {
         controller.abort();
       };
     },
-    [query, controller, handleCloseMovie]
+    [query]
   );
 
   //this is the front part of the app that we see in the web
