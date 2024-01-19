@@ -30,6 +30,7 @@ export default function App() {
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
+
   //store the watched array in local storage
   useEffect(
     function () {
@@ -171,10 +172,26 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
   const [movieLink, setMovieLink] = useState("");
   const [errors, setErrors] = useState("");
   const [selectedSeason, setSelectedSeason] = useState(1);
-  const [totalEpisodes, setTotalEpisodes] = useState();
+  const [totalEpisodes, setTotalEpisodes] = useState([]);
   const ratingCounterRef = useRef(0);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
 
+  //add to watchlist function
+  function handleAddToWatchList() {
+    const newWatchedMovie = {
+      imdbID: selectId,
+      title,
+      year,
+      poster,
+      imdbRating: Number(imdbRating),
+      runtime: Number(runtime.split(" ").at(0)),
+      userRating,
+      countRatingDecision: ratingCounterRef.current,
+    };
+    onAddWatched(newWatchedMovie);
+    onCloseMovie();
+  }
+  //userrating handle
   useEffect(
     function () {
       if (userRating) {
@@ -205,60 +222,103 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     Country: country,
     totalSeasons,
   } = movie;
-  // console.log(movie);
-
-  const fetchEpisodes = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `https://www.omdbapi.com/?apikey=${apiKey}&i=${selectId}&season=${selectedSeason}&episodes`
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch data");
-      }
-      const allEpisodes = data.Episodes.length;
-      setTotalEpisodes(allEpisodes);
-    } catch (error) {
-      console.error("Error fetching episodes:", error.message);
-      setErrors("Failed to fetch episode data");
-    }
-  }, [selectId, selectedSeason]);
 
   useEffect(() => {
-    fetchEpisodes();
-  }, [fetchEpisodes, selectId, selectedSeason, totalEpisodes]);
+    let isMounted = true;
 
-  function handleAddToWatchList() {
-    const newWatchedMovie = {
-      imdbID: selectId,
-      title,
-      year,
-      poster,
-      imdbRating: Number(imdbRating),
-      runtime: Number(runtime.split(" ").at(0)),
-      userRating,
-      countRatingDecision: ratingCounterRef.current,
+    // Fetch episodes
+
+    async function fetchEpisodes() {
+      // Check if the type is 'series'
+      if (type === "series") {
+        try {
+          // Fetch episode data from the OMDB API
+          const response = await fetch(
+            `https://www.omdbapi.com/?apikey=${apiKey}&i=${selectId}&season=${selectedSeason}&episodes`
+          );
+
+          // Extract JSON data from the response
+          const data = await response.json();
+
+          // Check if the response is not okay (status code other than 2xx)
+          if (!response.ok) {
+            // If not okay, throw an error with the error message or a default "Failed to fetch data" message
+            throw new Error(data.error || "Failed to fetch data");
+          }
+
+          // Extract the total number of episodes from the fetched data
+          const allEpisodes = data.Episodes.length;
+
+          // Set the total number of episodes in the component state
+          setTotalEpisodes(allEpisodes);
+        } catch (error) {
+          // Handle any errors that occurred during the fetch operation
+          console.error("Error fetching episodes:", error.message);
+
+          // Set an error message in the component state
+          setErrors("Failed to fetch episode data");
+        }
+      }
+    }
+
+    // Fetch movie link
+    const fetchMyMovies = async () => {
+      isMounted = true;
+      try {
+        // Clear any previous errors
+        setErrors("");
+
+        // Check if 'type' is truthy (not undefined, null, false, 0, or an empty string)
+        if (type) {
+          // Initialize an empty URL string
+          let url = "";
+
+          // Construct the URL based on the 'type'
+          if (type === "series") {
+            url = `https://vidsrc.xyz/embed/tv?imdb=${selectId}&season=${selectedSeason}&episode=${selectedEpisode}`;
+          } else {
+            url = `https://vidsrc.xyz/embed/${type}/${selectId}`;
+          }
+
+          // Fetch data from the constructed URL
+          const response = await fetch(url);
+
+          // Extract the data from the response
+          const data = await response;
+
+          // Check if the response is not okay (status code other than 2xx)
+          if (!data.ok) {
+            // If not okay, throw an error with the error message or a default "Not found" message
+            throw new Error(data.error || "Not found");
+          }
+
+          // If the component is still mounted, set the movie link using the URL
+          if (isMounted) {
+            setMovieLink(data.url);
+          }
+        }
+      } catch (err) {
+        // Handle any errors that occurred during the fetch operation
+        console.error("Error fetching movie link:", err);
+
+        // If the component is still mounted, set the error message
+        if (isMounted) {
+          setErrors(err.message);
+        }
+      }
     };
-    onAddWatched(newWatchedMovie);
-    onCloseMovie();
-  }
 
-  ////uses escape function to come back
-  useEffect(() => {
-    function closeMovieDetails(e) {
-      if (e.code === "Escape") {
-        onCloseMovie();
-      }
-    }
-
-    document.addEventListener("keydown", closeMovieDetails);
+    // Call both fetch functions
+    fetchEpisodes();
+    fetchMyMovies();
 
     return () => {
-      document.removeEventListener("keydown", closeMovieDetails);
+      isMounted = false; // Set the flag to false when the component is unmounted
     };
-  }, [onCloseMovie]);
+  }, [selectId, type, selectedSeason, selectedEpisode]);
 
-  //fetching the movie setting setMovie
+  ////////////////////////////////////////////////////////////////////////
+  //fetching the movie from OMDB Server setting setMovie
   useEffect(
     function () {
       setIsLoading(true);
@@ -279,54 +339,6 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     [selectId]
   );
 
-  //Setting the movielink for videosource
-  useEffect(
-    function () {
-      let isMounted = true;
-      //console.log(episodeData);
-      async function fetchMovieLink() {
-        try {
-          setErrors("");
-          if (type) {
-            if (type === "series") {
-              const seriesUrl = await fetch(
-                `https://vidsrc.xyz/embed/tv?imdb=${selectId}&season=${selectedSeason}&episode=${selectedEpisode}`
-              );
-              const data = await seriesUrl;
-
-              if (!seriesUrl.ok) {
-                throw new Error(data.error || "Not found");
-              }
-
-              if (isMounted) {
-                setMovieLink(seriesUrl.url);
-              }
-            } else {
-              const res = await fetch(
-                `https://vidsrc.xyz/embed/${type}/${selectId}`
-              );
-              let data = await res;
-              if (!res.ok) throw new Error(data.error || "Not found");
-              if (isMounted) {
-                setMovieLink(data.url);
-              }
-            }
-          }
-        } catch (err) {
-          if (isMounted) {
-            setErrors(err.message);
-          }
-        }
-      }
-
-      fetchMovieLink();
-      return () => {
-        isMounted = false; // Set the flag to false when the component is unmounted
-      };
-    },
-    [selectId, type, selectedSeason, selectedEpisode]
-  );
-
   //change app title in browser with movies name
   useEffect(
     function () {
@@ -339,6 +351,21 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     },
     [type, title]
   );
+
+  ////uses escape function to come back
+  useEffect(() => {
+    function closeMovieDetails(e) {
+      if (e.code === "Escape") {
+        onCloseMovie();
+      }
+    }
+
+    document.addEventListener("keydown", closeMovieDetails);
+
+    return () => {
+      document.removeEventListener("keydown", closeMovieDetails);
+    };
+  }, [onCloseMovie]);
 
   //displays the movie details on web
   return (
@@ -425,7 +452,7 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
                       <p>
                         <strong>Episode</strong>
                       </p>
-                      {console.log(selectedEpisode)}
+
                       <select
                         value={selectedEpisode}
                         onChange={(e) =>
