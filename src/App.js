@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StarRating from "./Stars";
-
+import { useMovie } from "./useMovie";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKey } from "./useKey";
 const apiKey = "2537c8";
+
 export default function App() {
-  const [movies, setMovies] = useState([]);
-  // const [watched, setWatched] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [selectId, setSelectId] = useState("tt0903747");
-  const controller = new AbortController();
-  const [watched, setWatched] = useState(() => {
-    const storedWatched = localStorage.getItem("watched");
-    return storedWatched ? JSON.parse(storedWatched) : [];
-  });
+  const { movies, isLoading, error } = useMovie(query);
+  const [watched, setWatched] = useLocalStorageState([], "watched");
 
   function handleSelectMovie(id) {
     setSelectId((selectId) => (selectId === id ? null : id));
@@ -31,70 +27,6 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  //store the watched array in local storage
-  useEffect(
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
-  //fetch data and error handling
-  useEffect(
-    function () {
-      async function fetchMovies() {
-        try {
-          setIsLoading(true);
-          setError("");
-
-          //fetch data from api
-
-          const res = await fetch(
-            `https://www.omdbapi.com/?apikey=${apiKey}&s=${query}`,
-            { signal: controller.signal }
-          );
-          //if data comes false it will convert it to true to show error
-          if (!res.ok) {
-            throw new Error("Something Went Wrong While Loading Movies 🥺");
-          }
-
-          const data = await res.json();
-          if (data.Response === "False") {
-            throw new Error(`${query} Not Found! 🥺`);
-          }
-
-          setMovies(data.Search);
-        } catch (err) {
-          setError(err.message);
-          if (err.name !== "AbortedError") {
-            setError(err.message);
-          }
-          setIsLoading(false);
-          setError("");
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
-      if (query.trim() !== "" && query.length > 2) {
-        // Call fetchMovies only if the query is not empty
-        fetchMovies();
-      } else {
-        setError("");
-        // this clears the Movies if the search length is below 2
-        setMovies([]);
-      }
-      //it closes the right movie desc if we are searching for another movie
-      handleCloseMovie();
-
-      //this is used to abort last action if user keeps writing in search
-      return function cleanup() {
-        controller.abort();
-      };
-    },
-    [query]
-  );
-
-  //this is the front part of the app that we see in the web
   return (
     <>
       <Navbar>
@@ -223,6 +155,7 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     totalSeasons,
   } = movie;
 
+  //fetch movielink and episodes
   useEffect(() => {
     let isMounted = true;
 
@@ -339,6 +272,8 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     [selectId]
   );
 
+  useKey("Escape", onCloseMovie);
+
   //change app title in browser with movies name
   useEffect(
     function () {
@@ -351,21 +286,6 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     },
     [type, title]
   );
-
-  ////uses escape function to come back
-  useEffect(() => {
-    function closeMovieDetails(e) {
-      if (e.code === "Escape") {
-        onCloseMovie();
-      }
-    }
-
-    document.addEventListener("keydown", closeMovieDetails);
-
-    return () => {
-      document.removeEventListener("keydown", closeMovieDetails);
-    };
-  }, [onCloseMovie]);
 
   //displays the movie details on web
   return (
@@ -519,22 +439,20 @@ function Logo() {
 function Search({ query, setQuery }) {
   const inputEl = useRef(null);
   //see if the input is focused or typing so when we press enter nothing happens and if input is not focused then we can press enter to clear the data
-  useEffect(
-    function () {
-      function callBack(e) {
-        //console.log(e);
-        if (document.activeElement === inputEl.current) return;
-        if (e.code === "Enter") {
-          inputEl.current.focus();
-          setQuery("");
-        }
-      }
+  useKey("Enter", function callBack(e) {
+    //console.log(e);
+    if (!inputEl.current) return; // Check if inputEl is not null
 
-      document.addEventListener("keydown", callBack);
-      return document.addEventListener("keydown", callBack);
-    },
-    [setQuery]
-  );
+    // Check if the active element is already the input
+    if (document.activeElement === inputEl.current) return;
+
+    // Focus on the input element
+    if (inputEl.current) {
+      inputEl.current.focus();
+    }
+    // Perform any additional actions or set state as needed
+    setQuery("");
+  });
 
   return (
     <>
